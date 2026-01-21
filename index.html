@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Planning Église">
+    <meta name="theme-color" content="#1f2937">
+
+```
+<title>Planning Église - Mobile</title>
+
+<link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlBsYW5uaW5nIMOJZ2xpc2UiLAogICJzaG9ydF9uYW1lIjogIlBsYW5uaW5nIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNmZmZmZmYiLAogICJ0aGVtZV9jb2xvciI6ICIjMWYyOTM3IiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sLCUzQ3N2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJyUzRSUzQ3JlY3Qgd2lkdGg9JzEwMCcgaGVpZ2h0PScxMDAnIGZpbGw9JyUyMzFmMjkzNycvJTNFJTNDdGV4dCB4PSc1MCcgeT0nNTUnIGZvbnQtc2l6ZT0nNDAnIGZpbGw9J3doaXRlJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJyBmb250LWZhbWlseT0nQXJpYWwnJTNFUCUzQy90ZXh0JTNFJTNDL3N2ZyUzRSIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICAgIH0sCiAgICB7CiAgICAgICJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sLCUzQ3N2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJyUzRSUzQ3JlY3Qgd2lkdGg9JzEwMCcgaGVpZ2h0PScxMDAnIGZpbGw9JyUyMzFmMjkzNycvJTNFJTNDdGV4dCB4PSc1MCcgeT0nNTUnIGZvbnQtc2l6ZT0nNDAnIGZpbGw9J3doaXRlJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJyBmb250LWZhbWlseT0nQXJpYWwnJTNFUCUzQy90ZXh0JTNFJTNDL3N2ZyUzRSIsCiAgICAgICJzaXplcyI6ICI1MTJ4NTEyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICAgIH0KICBdCn0=">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+<style>
+    /* Reset mobile */
+    * { -webkit-tap-highlight-color: transparent; }
+    body { overscroll-behavior: none; }
+    
+    /* Scrollbars */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    
+    [v-cloak] { display: none; }
+    
+    /* Safe area pour iPhone */
+    .safe-top { padding-top: env(safe-area-inset-top); }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+    
+    /* Animation pour le menu mobile */
+    .slide-in { animation: slideIn 0.3s ease-out; }
+    @keyframes slideIn {
+        from { transform: translateX(-100%); }
+        to { transform: translateX(0); }
+    }
+    
+    /* Touch feedback */
+    .touch-feedback:active { transform: scale(0.98); opacity: 0.8; }
+</style>
+```
+
+</head>
+
+<body class="bg-gray-100 text-gray-800 h-screen flex flex-col overflow-hidden font-sans safe-top safe-bottom" v-cloak>
+
+<div id="app" class="flex flex-col h-full overflow-hidden">
+
+```
+<!-- Header Mobile -->
+<div class="bg-gray-800 text-white px-4 py-3 flex items-center justify-between shadow-lg z-50">
+    <button @click="showSidebar = !showSidebar" class="p-2 touch-feedback">
+        <i class="fas fa-bars text-xl"></i>
+    </button>
+    <h1 class="text-lg font-bold">Planning Église</h1>
+    <button @click="showActions = !showActions" class="p-2 touch-feedback">
+        <i class="fas fa-ellipsis-v text-xl"></i>
+    </button>
+</div>
+
+<!-- Actions Menu (dropdown) -->
+<div v-show="showActions" @click="showActions = false" class="fixed inset-0 bg-black bg-opacity-50 z-40" style="touch-action: none;">
+    <div @click.stop class="absolute top-14 right-4 bg-white rounded-lg shadow-2xl overflow-hidden" style="min-width: 200px;">
+        <button @click="addEvent(); showActions = false;" class="w-full px-4 py-3 text-left hover:bg-gray-100 flex items-center gap-3 border-b touch-feedback">
+            <i class="fas fa-plus text-indigo-600"></i>
+            <span>Ajouter événement</span>
+        </button>
+        <button @click="exportPDF(); showActions = false;" class="w-full px-4 py-3 text-left hover:bg-gray-100 flex items-center gap-3 border-b touch-feedback" :disabled="isExporting">
+            <i class="fas fa-file-pdf text-red-600"></i>
+            <span>{{ isExporting ? 'Export...' : 'Exporter PDF' }}</span>
+        </button>
+        <button @click="resetAll(); showActions = false;" class="w-full px-4 py-3 text-left hover:bg-gray-100 flex items-center gap-3 text-red-600 touch-feedback">
+            <i class="fas fa-trash"></i>
+            <span>Tout effacer</span>
+        </button>
+    </div>
+</div>
+
+<!-- Sidebar Personnes -->
+<div v-show="showSidebar" @click="showSidebar = false" class="fixed inset-0 bg-black bg-opacity-50 z-30" style="touch-action: none;">
+    <div @click.stop class="absolute left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white shadow-2xl flex flex-col slide-in">
+        <div class="p-4 bg-gray-50 border-b">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="font-bold text-lg text-gray-800 flex items-center">
+                    <i class="fas fa-users mr-2 text-indigo-600"></i> Effectif
+                </h2>
+                <button @click="showSidebar = false" class="p-2 text-gray-500 hover:text-gray-800 touch-feedback">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <input type="text" v-model="searchQuery" placeholder="Rechercher..." class="w-full p-2 border rounded text-sm focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
+            <div 
+                v-for="person in filteredPersons" 
+                :key="person.id"
+                @click="selectPersonForDrop(person)"
+                class="p-3 bg-white border border-gray-200 rounded-lg shadow-sm active:bg-gray-50 transition-all border-l-4 relative touch-feedback"
+                :class="person.role === 'Conseil' ? 'border-l-purple-500' : 'border-l-indigo-500'"
+            >
+                <button @click.stop="startEdit(person)" class="absolute top-2 right-2 text-gray-400 p-1 touch-feedback">
+                    <i class="fas fa-pencil-alt text-xs"></i>
+                </button>
+
+                <div class="pr-6">
+                    <span class="font-bold text-gray-700">{{ person.name }}</span>
+                </div>
+                
+                <div class="flex items-center gap-2 mt-1">
+                    <span v-if="person.role === 'Conseil'" class="text-[10px] uppercase font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Conseil</span>
+                    <span v-if="person.familyId" class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 text-xs">
+                        <i class="fas fa-home text-[10px]"></i> {{ person.familyId }}
+                    </span>
+                </div>
+
+                <div v-if="getRestCount(person.id) === 0 && person.role !== 'Conseil'" class="mt-2 text-[10px] text-red-600 font-bold bg-red-50 px-2 py-1 rounded flex items-center">
+                    <i class="fas fa-exclamation-circle mr-1"></i> Pas de repos
+                </div>
+            </div>
+        </div>
+
+        <div class="border-t bg-gray-50 p-3">
+            <button @click="toggleForm" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 touch-feedback">
+                <i class="fas fa-plus"></i>
+                <span>Ajouter personne</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ajout/Édition Personne -->
+<div v-show="isFormOpen" @click="isFormOpen = false" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
+    <div @click.stop class="w-full bg-white rounded-t-2xl shadow-2xl p-6 space-y-4" style="max-height: 70vh; overflow-y: auto;">
+        <h3 class="text-lg font-bold text-gray-800">{{ editingId ? 'Modifier' : 'Ajouter' }} une personne</h3>
+        
+        <input v-model="formPerson.name" placeholder="Nom Prénom" class="w-full p-3 border rounded-lg text-base focus:border-indigo-500 focus:outline-none">
+        
+        <select v-model="formPerson.role" class="w-full p-3 border rounded-lg bg-white text-base">
+            <option value="Membre">Membre</option>
+            <option value="Conseil">Conseil</option>
+        </select>
+        
+        <input v-model="formPerson.family" placeholder="Famille (optionnel)" class="w-full p-3 border rounded-lg text-base focus:border-indigo-500 focus:outline-none">
+        
+        <div class="flex gap-3">
+            <button @click="isFormOpen = false; cancelEdit();" class="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold touch-feedback">
+                Annuler
+            </button>
+            <button @click="savePerson" class="flex-1 text-white py-3 rounded-lg font-semibold touch-feedback"
+                    :class="editingId ? 'bg-orange-500' : 'bg-indigo-600'">
+                {{ editingId ? 'Modifier' : 'Ajouter' }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Sélection Cellule -->
+<div v-show="showCellSelector" @click="showCellSelector = false" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
+    <div @click.stop class="w-full bg-white rounded-t-2xl shadow-2xl p-6 space-y-4" style="max-height: 70vh; overflow-y: auto;">
+        <h3 class="text-lg font-bold text-gray-800">Placer {{ selectedPerson?.name }}</h3>
+        <p class="text-sm text-gray-600">Sélectionnez l'événement et le service :</p>
+        
+        <div class="space-y-2">
+            <div v-for="event in events" :key="event.id" class="border rounded-lg p-3">
+                <h4 class="font-bold text-gray-700 mb-2">{{ event.name }}</h4>
+                <div class="grid grid-cols-2 gap-2">
+                    <button 
+                        v-for="service in services" 
+                        :key="service.id"
+                        @click="assignPersonToCell(event.id, service.id)"
+                        class="p-3 rounded-lg text-sm font-medium transition touch-feedback"
+                        :class="service.id === 'repos' ? 'bg-green-100 text-green-700 border-2 border-green-300' : 'bg-gray-100 text-gray-700 border-2 border-gray-300'"
+                    >
+                        {{ service.name }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Planning Table -->
+<div class="flex-1 overflow-auto custom-scrollbar" id="planning-container">
+    <div id="planning-board" class="bg-white shadow-lg m-3 rounded-lg overflow-hidden" style="min-width: min-content;">
+        
+        <!-- En-tête -->
+        <div class="grid gap-0 border-b-2 border-gray-300 sticky top-0 bg-white z-10" :style="`grid-template-columns: 120px repeat(${events.length}, minmax(200px, 1fr))`">
+            <div class="bg-gray-800 text-white font-bold p-3 text-sm flex items-center justify-center border-r-2 border-gray-700">
+                Service
+            </div>
+            <div v-for="event in events" :key="event.id" class="bg-gray-800 text-white p-3 border-r-2 border-gray-700 last:border-r-0">
+                <div class="flex items-center justify-between">
+                    <span class="font-bold text-xs" @click="renameEvent(event)">{{ event.name }}</span>
+                    <button @click="removeEvent(event.id)" class="text-gray-400 ml-2 p-1 touch-feedback">
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lignes -->
+        <div v-for="service in services" :key="service.id" 
+             class="grid gap-0 border-b border-gray-200"
+             :style="`grid-template-columns: 120px repeat(${events.length}, minmax(200px, 1fr))`"
+             :class="service.id === 'repos' ? 'bg-green-50/30' : ''">
+            
+            <div class="p-3 text-xs font-semibold border-r-2 border-gray-300 flex items-center justify-end text-right sticky left-0 z-10"
+                 :class="service.id === 'repos' ? 'bg-green-100 text-green-700' : 'bg-gray-50 text-gray-700'">
+                {{ service.name }}
+            </div>
+
+            <div v-for="event in events" :key="event.id" 
+                 @click="openCellSelector(event.id, service.id)"
+                 class="p-2 min-h-[100px] border-r border-gray-200"
+                 :class="service.id === 'repos' ? 'bg-green-50/50' : 'bg-white'">
+                <div class="h-full border-2 border-dashed rounded-lg p-2 flex flex-col gap-1.5"
+                     :class="service.id === 'repos' ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-gray-50'">
+                    
+                    <div v-if="getAssignments(event.id, service.id).length === 0" class="flex-1 flex items-center justify-center opacity-30">
+                        <i class="fas fa-plus text-gray-400 text-xs"></i>
+                    </div>
+
+                    <div 
+                        v-for="assign in getAssignments(event.id, service.id)" 
+                        :key="assign.internalId"
+                        @click.stop
+                        class="bg-white border rounded shadow-sm p-2 text-xs relative touch-feedback"
+                        :class="getValidationClass(assign, event.id, service.id)"
+                    >
+                        <div class="flex justify-between items-start">
+                            <span class="font-bold text-gray-800 text-[11px]">{{ assign.person.name }}</span>
+                            <button @click.stop="removeAssignment(assign.internalId)" class="text-gray-400 p-1 touch-feedback">
+                                <i class="fas fa-times text-[10px]"></i>
+                            </button>
+                        </div>
+                        <div v-if="assign.person.role === 'Conseil'" class="mt-1">
+                            <span class="text-[8px] bg-purple-100 text-purple-700 px-1 rounded">Conseil</span>
+                        </div>
+                        <div v-if="getFamilyWarning(assign, event.id, service.id)" class="mt-1 text-[8px] text-red-700 bg-red-100 px-1 py-0.5 rounded flex items-center gap-1 border border-red-200">
+                            <i class="fas fa-heart-broken"></i>
+                            <span class="font-medium">Famille repos!</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+```
+
+</div>
+
+<script>
+    const { createApp, ref, computed, reactive, nextTick } = Vue;
+
+    createApp({
+        setup() {
+            const persons = ref([
+                { id: 'p1', name: 'Loïc Dupont', role: 'Membre', familyId: 'Dupont' },
+                { id: 'p2', name: 'Marie Dupont', role: 'Membre', familyId: 'Dupont' },
+                { id: 'p3', name: 'Jean Martin', role: 'Conseil', familyId: 'Martin' },
+                { id: 'p4', name: 'Sophie Martin', role: 'Membre', familyId: 'Martin' },
+            ]);
+
+            const services = ref([
+                { id: 'accueil', name: 'Accueil' },
+                { id: 'louange', name: 'Louange' },
+                { id: 'predic', name: 'Prédication' },
+                { id: 'enfants', name: 'Enfants' },
+                { id: 'repos', name: 'REPOS' }, 
+            ]);
+
+            const events = ref([
+                { id: 'e1', name: 'Dim 05 Jan' },
+                { id: 'e2', name: 'Dim 12 Jan' },
+                { id: 'e3', name: 'Dim 19 Jan' },
+            ]);
+
+            const assignments = ref([]);
+            
+            // UI State Mobile
+            const showSidebar = ref(false);
+            const showActions = ref(false);
+            const showCellSelector = ref(false);
+            const selectedPerson = ref(null);
+            const targetCell = ref({ eventId: null, serviceId: null });
+            const searchQuery = ref("");
+            const editingId = ref(null);
+            const isFormOpen = ref(false);
+            const isExporting = ref(false);
+            const formPerson = reactive({ name: "", role: "Membre", family: "" });
+
+            const filteredPersons = computed(() => {
+                if (!searchQuery.value) return persons.value;
+                return persons.value.filter(p => p.name.toLowerCase().includes(searchQuery.value.toLowerCase()));
+            });
+
+            const getAssignments = (eventId, serviceId) => assignments.value.filter(a => a.eventId === eventId && a.serviceId === serviceId);
+            const getRestCount = (personId) => assignments.value.filter(a => a.person.id === personId && a.serviceId === 'repos').length;
+
+            const getFamilyWarning = (assignment, eventId, serviceId) => {
+                if (assignment.person.role === 'Conseil') return false;
+                if (serviceId === 'repos' || !assignment.person.familyId) return false;
+                const peopleInRest = getAssignments(eventId, 'repos');
+                return peopleInRest.find(a => a.person.familyId === assignment.person.familyId && a.person.id !== assignment.person.id);
+            };
+
+            const getValidationClass = (assignment, eventId, serviceId) => {
+                if (getFamilyWarning(assignment, eventId, serviceId)) return 'border-red-400 ring-1 ring-red-400 bg-red-50';
+                if (serviceId === 'repos') return 'border-green-300 bg-green-50/80';
+                return 'border-gray-200';
+            };
+
+            // Mobile: Sélection personne puis cellule
+            const selectPersonForDrop = (person) => {
+                selectedPerson.value = person;
+                showSidebar.value = false;
+                showCellSelector.value = true;
+            };
+
+            const openCellSelector = (eventId, serviceId) => {
+                if (!selectedPerson.value) return;
+                targetCell.value = { eventId, serviceId };
+            };
+
+            const assignPersonToCell = (eventId, serviceId) => {
+                if (!selectedPerson.value) return;
+
+                const person = selectedPerson.value;
+
+                if (person.role !== 'Conseil') {
+                    const existing = assignments.value.find(a => a.eventId === eventId && a.person.id === person.id);
+                    if (existing) {
+                        alert(`🚫 ${person.name} est déjà sur cet événement.`);
+                        return;
+                    }
+                }
+
+                assignments.value.push({
+                    internalId: Date.now() + Math.random(),
+                    person: person,
+                    eventId: eventId,
+                    serviceId: serviceId
+                });
+
+                showCellSelector.value = false;
+                selectedPerson.value = null;
+            };
+
+            const exportPDF = async () => {
+                isExporting.value = true;
+                await nextTick();
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                const element = document.getElementById('planning-board');
+                
+                try {
+                    const canvas = await html2canvas(element, {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff'
+                    });
+                    
+                    const { jsPDF } = window.jspdf;
+                    const imgWidth = canvas.width;
+                    const imgHeight = canvas.height;
+                    const pdfWidth = 420;
+                    const pdfHeight = 297;
+                    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+                    const scaledWidth = imgWidth * ratio;
+                    const scaledHeight = imgHeight * ratio;
+                    
+                    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
+                    const xOffset = (pdfWidth - scaledWidth) / 2;
+                    const yOffset = (pdfHeight - scaledHeight) / 2;
+                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                    pdf.addImage(imgData, 'JPEG', xOffset, yOffset, scaledWidth, scaledHeight);
+                    pdf.save(`planning-${new Date().toISOString().split('T')[0]}.pdf`);
+                } catch (error) {
+                    alert('Erreur lors de l\'export PDF');
+                } finally {
+                    isExporting.value = false;
+                }
+            };
+
+            const startEdit = (p) => { 
+                editingId.value = p.id; 
+                formPerson.name = p.name; 
+                formPerson.role = p.role; 
+                formPerson.family = p.familyId || ""; 
+                isFormOpen.value = true;
+                showSidebar.value = false;
+            };
+
+            const cancelEdit = () => { 
+                editingId.value = null; 
+                formPerson.name = ""; 
+                formPerson.role = "Membre"; 
+                formPerson.family = ""; 
+            };
+
+            const toggleForm = () => { 
+                isFormOpen.value = !isFormOpen.value;
+                showSidebar.value = false;
+            };
+            
+            const savePerson = () => {
+                if(!formPerson.name.trim()) return;
+                if (editingId.value) {
+                    const idx = persons.value.findIndex(p => p.id === editingId.value);
+                    if (idx !== -1) {
+                        persons.value[idx].name = formPerson.name;
+                        persons.value[idx].role = formPerson.role;
+                        persons.value[idx].familyId = formPerson.family || null;
+                        assignments.value.forEach(a => { 
+                            if (a.person.id === editingId.value) { 
+                                a.person.name = formPerson.name; 
+                                a.person.role = formPerson.role; 
+                                a.person.familyId = formPerson.family || null; 
+                            } 
+                        });
+                    }
+                } else {
+                    persons.value.push({ 
+                        id: 'p' + Date.now(), 
+                        name: formPerson.name, 
+                        role: formPerson.role, 
+                        familyId: formPerson.family || null 
+                    });
+                }
+                cancelEdit();
+                isFormOpen.value = false;
+            };
+
+            const removeAssignment = (id) => assignments.value = assignments.value.filter(a => a.internalId !== id);
+            
+            const renameEvent = (ev) => { 
+                const n = prompt("Nom de l'événement:", ev.name); 
+                if (n && n.trim()) ev.name = n; 
+            };
+
+            const removeEvent = (id) => { 
+                if(confirm("Supprimer cet événement ?")) { 
+                    events.value = events.value.filter(e => e.id !== id); 
+                    assignments.value = assignments.value.filter(a => a.eventId !== id); 
+                } 
+            };
+
+            const addEvent = () => {
+                const name = prompt("Nom du nouvel événement:", "Dim " + new Date().getDate() + " " + new Date().toLocaleString('fr', {month: 'short'}));
+                if (name) events.value.push({ id: 'e' + Date.now(), name: name });
+            };
+
+            const resetAll = () => { 
+                if(confirm("ATTENTION : Tout effacer ?")) { 
+                    assignments.value = []; 
+                    events.value = []; 
+                } 
+            };
+
+            return {
+                persons, services, events, assignments, searchQuery, filteredPersons,
+                showSidebar, showActions, showCellSelector, selectedPerson, targetCell,
+                formPerson, editingId, isFormOpen, isExporting,
+                getAssignments, getRestCount, getFamilyWarning, getValidationClass,
+                selectPersonForDrop, openCellSelector, assignPersonToCell,
+                exportPDF, startEdit, cancelEdit, toggleForm, savePerson,
+                removeAssignment, renameEvent, removeEvent, addEvent, resetAll
+            };
+        }
+    }).mount('#app');
+</script>
+
+</body>
+</html>
