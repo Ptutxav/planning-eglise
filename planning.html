@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planning Église - V2.4 (Design PDF Pro)</title>
+    <title>Planning Église - V2.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -29,10 +29,8 @@
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: white;
         }
-        
-        /* En-têtes (Dates) */
         .pdf-table thead th {
-            background-color: #1f2937; /* Gris très foncé / Bleu nuit */
+            background-color: #1f2937;
             color: white;
             padding: 12px;
             font-size: 14px;
@@ -40,16 +38,12 @@
             letter-spacing: 0.5px;
             border: 1px solid #111827;
         }
-
-        /* Cellules générales */
         .pdf-table td {
-            border: 1px solid #e5e7eb; /* Gris clair élégant */
+            border: 1px solid #e5e7eb;
             padding: 10px;
             vertical-align: top;
             color: #1f2937;
         }
-
-        /* Colonne Service (Gauche) */
         .pdf-service-cell {
             background-color: #f3f4f6;
             font-weight: 800;
@@ -60,11 +54,9 @@
             padding-right: 15px !important;
             vertical-align: middle !important;
         }
-
-        /* Titre des sous-postes (ex: GUITARE) */
         .pdf-role-label {
             font-size: 10px;
-            color: #6b7280; /* Gris moyen */
+            color: #6b7280;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -73,24 +65,19 @@
             border-bottom: 1px solid #f3f4f6;
             padding-bottom: 1px;
         }
-
-        /* NOM DES PERSONNES (Le plus important) */
         .pdf-person-name {
-            font-size: 13px; /* Police augmentée */
-            font-weight: 600; /* Gras */
+            font-size: 13px;
+            font-weight: 600;
             color: #000;
             margin-bottom: 3px;
             display: flex;
             align-items: center;
         }
-        
         .pdf-bullet {
             color: #cbd5e1;
             margin-right: 6px;
             font-size: 10px;
         }
-
-        /* Titre du document PDF */
         .pdf-title {
             font-size: 24px;
             font-weight: bold;
@@ -106,6 +93,8 @@
 <body class="bg-gray-100 text-gray-800 h-screen flex flex-col overflow-hidden font-sans" v-cloak>
 
 <div id="app" class="flex flex-1 h-full overflow-hidden">
+
+    <input type="file" id="fileInput" ref="fileInput" @change="handleFileUpload" accept=".json" class="hidden">
 
     <div :class="['bg-white border-r border-gray-300 flex flex-col shadow-xl z-20 shrink-0 sidebar-transition relative', isSidebarOpen ? 'w-80' : 'w-0 overflow-hidden']" data-html2canvas-ignore>
         
@@ -127,11 +116,16 @@
                     class="p-3 bg-white border border-gray-200 rounded-lg shadow-sm cursor-grab hover:shadow-md hover:-translate-y-0.5 transition-all border-l-4 group relative"
                     :class="person.role === 'Conseil' ? 'border-l-purple-500' : 'border-l-indigo-500'"
                 >
-                    <button @click="startEdit(person)" class="absolute top-2 right-2 text-gray-300 hover:text-indigo-600 transition" title="Modifier">
-                        <i class="fas fa-pencil-alt text-xs"></i>
-                    </button>
+                    <div class="absolute top-2 right-2 flex gap-2">
+                        <button @click.stop="startEdit(person)" class="text-gray-300 hover:text-indigo-600 transition" title="Modifier">
+                            <i class="fas fa-pencil-alt text-xs"></i>
+                        </button>
+                        <button @click.stop="deletePerson(person.id)" class="text-gray-300 hover:text-red-500 transition" title="Supprimer la personne">
+                            <i class="fas fa-trash-alt text-xs"></i>
+                        </button>
+                    </div>
 
-                    <div class="flex justify-between items-center pr-6">
+                    <div class="flex justify-between items-center pr-10">
                         <span class="font-bold text-gray-700">{{ person.name }}</span>
                     </div>
                     
@@ -217,10 +211,20 @@
             <div class="flex items-center gap-4">
                 <h1 class="text-xl font-bold text-gray-800 hidden md:block">Planning</h1>
                 <div v-if="savedTimestamp" class="text-xs text-green-600 flex items-center bg-green-50 px-2 py-1 rounded">
-                    <i class="fas fa-check-circle mr-1"></i> Sauvegardé
+                    <i class="fas fa-check-circle mr-1"></i> Auto-save
                 </div>
             </div>
-            <div class="flex gap-2">
+            <div class="flex gap-2 items-center">
+                <div class="flex bg-gray-100 p-1 rounded-lg border border-gray-200 mr-2">
+                    <button @click="downloadJSON" class="text-gray-600 hover:text-indigo-600 px-3 py-1.5 rounded text-sm hover:bg-white transition flex items-center" title="Sauvegarder le fichier de données">
+                        <i class="fas fa-save mr-2"></i> Sauver
+                    </button>
+                    <div class="w-px bg-gray-300 mx-1"></div>
+                    <button @click="triggerImport" class="text-gray-600 hover:text-indigo-600 px-3 py-1.5 rounded text-sm hover:bg-white transition flex items-center" title="Ouvrir un fichier de données">
+                        <i class="fas fa-folder-open mr-2"></i> Ouvrir
+                    </button>
+                </div>
+
                 <button @click="openServiceModal" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-2 rounded shadow-sm transition flex items-center text-sm">
                     <i class="fas fa-sliders-h mr-2 text-indigo-600"></i> Config Services
                 </button>
@@ -484,6 +488,7 @@
             const tempRoleInputs = reactive({}); 
             const pdfOptions = reactive({ selectedServices: [] });
             const formPerson = reactive({ name: "", role: "Membre", family: "", competencies: [] });
+            const fileInput = ref(null);
 
             // --- PERSISTANCE ---
             const saveData = () => {
@@ -495,6 +500,54 @@
                 setTimeout(() => savedTimestamp.value = null, 2000);
             };
             watch([persons, services, events, assignments], saveData, { deep: true });
+
+            // --- IMPORT / EXPORT JSON ---
+            const downloadJSON = () => {
+                const data = {
+                    persons: persons.value,
+                    services: services.value,
+                    events: events.value,
+                    assignments: assignments.value,
+                    version: "2.6"
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `planning-data-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const triggerImport = () => fileInput.value.click();
+
+            const handleFileUpload = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if(data.persons && data.services && data.events) {
+                            if(confirm("Attention : Cela va remplacer le planning actuel par celui du fichier. Continuer ?")) {
+                                persons.value = data.persons;
+                                services.value = data.services;
+                                events.value = data.events;
+                                assignments.value = data.assignments || [];
+                                alert("Données chargées avec succès !");
+                            }
+                        } else {
+                            alert("Format de fichier invalide.");
+                        }
+                    } catch (err) {
+                        alert("Erreur lors de la lecture du fichier.");
+                        console.error(err);
+                    }
+                    event.target.value = '';
+                };
+                reader.readAsText(file);
+            };
 
             // --- COMPUTED ---
             const filteredPersons = computed(() => {
@@ -661,6 +714,14 @@
                 if (editingId.value) cancelEdit(); else { formPerson.name = ""; formPerson.role = "Membre"; formPerson.family = ""; formPerson.competencies = []; }
             };
 
+            const deletePerson = (id) => {
+                if(confirm("Voulez-vous vraiment supprimer cette personne ? Ses assignations seront aussi supprimées.")) {
+                    persons.value = persons.value.filter(p => p.id !== id);
+                    assignments.value = assignments.value.filter(a => a.person.id !== id);
+                    if(editingId.value === id) cancelEdit();
+                }
+            };
+
             // --- EXPORT PDF ---
             const openPdfModal = () => { pdfOptions.selectedServices = services.value.map(s => s.id); showPdfModal.value = true; };
             
@@ -685,13 +746,13 @@
                     const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
                     
                     const imgW = canvas.width;
-                    const imgH = canvas.height;
+                    const imgHeight = canvas.height;
                     const pdfW = 420;
                     const pdfH = 297;
                     
-                    const ratio = Math.min((pdfW - 20) / imgW, (pdfH - 20) / imgH);
+                    const ratio = Math.min((pdfW - 20) / imgW, (pdfH - 20) / imgHeight);
                     const finalW = imgW * ratio;
-                    const finalH = imgH * ratio;
+                    const finalH = imgHeight * ratio;
                     
                     const x = (pdfW - finalW) / 2;
                     const y = 10;
@@ -716,12 +777,12 @@
             return {
                 persons, services, events, assignments, searchQuery, filteredPersons, displayedServices,
                 dragOverId, formPerson, editingId, isFormOpen, isExporting, savedTimestamp, isSidebarOpen,
-                showPdfModal, showServiceModal, newServiceName, pdfOptions, activeMonths, tempRoleInputs,
+                showPdfModal, showServiceModal, newServiceName, pdfOptions, activeMonths, tempRoleInputs, fileInput,
                 getAssignments, getServiceName, getValidationClass, getFamilyWarning, getMissingRestMonths, formatCompetencies,
                 startDrag, onDrop, removeAssignment, addEvent, removeEvent, renameEvent, resetAll,
-                savePerson, startEdit, cancelEdit, toggleForm,
+                savePerson, startEdit, cancelEdit, deletePerson, toggleForm,
                 openServiceModal, addNewService, deleteService, addRole, removeRole,
-                openPdfModal, confirmExportPDF
+                openPdfModal, confirmExportPDF, downloadJSON, triggerImport, handleFileUpload
             };
         }
     }).mount('#app');
