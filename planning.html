@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planning Église - Export PDF Fixé</title>
+    <title>Planning Église - V2.4 (Design PDF Pro)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -13,7 +13,6 @@
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .row-height { min-height: 140px; }
         
         .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
@@ -21,39 +20,86 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
         [v-cloak] { display: none; }
+        .sidebar-transition { transition: all 0.3s ease-in-out; }
 
-        /* MODE IMPRESSION - Simplification totale du layout */
-        body.printing-active {
-            overflow: visible !important;
+        /* --- STYLES PDF AMÉLIORÉS --- */
+        .pdf-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: white;
         }
         
-        body.printing-active #planning-container {
-            overflow: visible !important;
-            padding: 0 !important;
+        /* En-têtes (Dates) */
+        .pdf-table thead th {
+            background-color: #1f2937; /* Gris très foncé / Bleu nuit */
+            color: white;
+            padding: 12px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1px solid #111827;
+        }
+
+        /* Cellules générales */
+        .pdf-table td {
+            border: 1px solid #e5e7eb; /* Gris clair élégant */
+            padding: 10px;
+            vertical-align: top;
+            color: #1f2937;
+        }
+
+        /* Colonne Service (Gauche) */
+        .pdf-service-cell {
+            background-color: #f3f4f6;
+            font-weight: 800;
+            font-size: 14px;
+            text-align: right;
+            color: #374151;
+            width: 140px;
+            padding-right: 15px !important;
+            vertical-align: middle !important;
+        }
+
+        /* Titre des sous-postes (ex: GUITARE) */
+        .pdf-role-label {
+            font-size: 10px;
+            color: #6b7280; /* Gris moyen */
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 8px;
+            margin-bottom: 3px;
+            border-bottom: 1px solid #f3f4f6;
+            padding-bottom: 1px;
+        }
+
+        /* NOM DES PERSONNES (Le plus important) */
+        .pdf-person-name {
+            font-size: 13px; /* Police augmentée */
+            font-weight: 600; /* Gras */
+            color: #000;
+            margin-bottom: 3px;
+            display: flex;
+            align-items: center;
         }
         
-        body.printing-active #planning-board {
-            position: static !important;
-            display: block !important;
-            overflow: visible !important;
-            background: white !important;
-            padding: 20px !important;
+        .pdf-bullet {
+            color: #cbd5e1;
+            margin-right: 6px;
+            font-size: 10px;
         }
-        
-        body.printing-active .sticky {
-            position: static !important;
-        }
-        
-        body.printing-active .overflow-auto,
-        body.printing-active .overflow-y-auto,
-        body.printing-active .custom-scrollbar {
-            overflow: visible !important;
-            max-height: none !important;
-        }
-        
-        body.printing-active .planning-columns {
-            display: flex !important;
-            flex-wrap: nowrap !important;
+
+        /* Titre du document PDF */
+        .pdf-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1f2937;
+            text-align: center;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
         }
     </style>
 </head>
@@ -61,126 +107,203 @@
 
 <div id="app" class="flex flex-1 h-full overflow-hidden">
 
-    <div class="w-80 bg-white border-r border-gray-300 flex flex-col shadow-xl z-20 shrink-0" data-html2canvas-ignore>
-        <div class="p-4 border-b bg-gray-50">
-            <h2 class="font-bold text-lg text-gray-800 flex items-center">
-                <i class="fas fa-layer-group mr-2 text-indigo-600"></i> Effectif
-            </h2>
-            <input type="text" v-model="searchQuery" placeholder="Rechercher..." class="mt-3 w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-indigo-500 transition">
-        </div>
+    <div :class="['bg-white border-r border-gray-300 flex flex-col shadow-xl z-20 shrink-0 sidebar-transition relative', isSidebarOpen ? 'w-80' : 'w-0 overflow-hidden']" data-html2canvas-ignore>
+        
+        <div class="flex flex-col h-full min-w-[20rem]"> 
+            <div class="p-4 border-b bg-gray-50">
+                <h2 class="font-bold text-lg text-gray-800 flex items-center justify-between">
+                    <span><i class="fas fa-users mr-2 text-indigo-600"></i> Effectif</span>
+                    <span class="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">{{ filteredPersons.length }}</span>
+                </h2>
+                <input type="text" v-model="searchQuery" placeholder="Rechercher..." class="mt-3 w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-indigo-500 transition">
+            </div>
 
-        <div class="flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50 custom-scrollbar">
-            <div 
-                v-for="person in filteredPersons" 
-                :key="person.id"
-                draggable="true"
-                @dragstart="startDrag($event, person, null)" 
-                class="p-3 bg-white border border-gray-200 rounded-lg shadow-sm cursor-grab hover:shadow-md hover:-translate-y-0.5 transition-all border-l-4 group relative"
-                :class="person.role === 'Conseil' ? 'border-l-purple-500' : 'border-l-indigo-500'"
-            >
-                <button @click="startEdit(person)" class="absolute top-2 right-2 text-gray-300 hover:text-indigo-600 transition" title="Modifier">
-                    <i class="fas fa-pencil-alt text-xs"></i>
-                </button>
+            <div class="flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50 custom-scrollbar">
+                <div 
+                    v-for="person in filteredPersons" 
+                    :key="person.id"
+                    draggable="true"
+                    @dragstart="startDrag($event, person, null, null)" 
+                    class="p-3 bg-white border border-gray-200 rounded-lg shadow-sm cursor-grab hover:shadow-md hover:-translate-y-0.5 transition-all border-l-4 group relative"
+                    :class="person.role === 'Conseil' ? 'border-l-purple-500' : 'border-l-indigo-500'"
+                >
+                    <button @click="startEdit(person)" class="absolute top-2 right-2 text-gray-300 hover:text-indigo-600 transition" title="Modifier">
+                        <i class="fas fa-pencil-alt text-xs"></i>
+                    </button>
 
-                <div class="flex justify-between items-center pr-6">
-                    <span class="font-bold text-gray-700">{{ person.name }}</span>
-                </div>
-                
-                <div class="flex items-center gap-2 mt-1">
-                    <span v-if="person.role === 'Conseil'" class="text-[10px] uppercase font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Conseil</span>
-                    <span v-if="person.familyId" class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 text-xs">
-                        <i class="fas fa-home text-[10px]"></i> {{ person.familyId }}
-                    </span>
-                </div>
+                    <div class="flex justify-between items-center pr-6">
+                        <span class="font-bold text-gray-700">{{ person.name }}</span>
+                    </div>
+                    
+                    <div class="flex flex-wrap items-center gap-2 mt-1">
+                        <span v-if="person.role === 'Conseil'" class="text-[10px] uppercase font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Conseil</span>
+                        <span v-if="person.familyId" class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 text-xs" :title="'Famille ' + person.familyId">
+                            <i class="fas fa-home text-[10px]"></i> {{ person.familyId }}
+                        </span>
+                    </div>
 
-                <div v-if="getRestCount(person.id) === 0 && person.role !== 'Conseil'" class="mt-2 text-[10px] text-red-600 font-bold bg-red-50 px-2 py-1 rounded flex items-center border border-red-100">
-                    <i class="fas fa-exclamation-circle mr-1"></i> Pas de repos ce mois-ci
+                    <div class="mt-2 flex flex-wrap gap-1">
+                        <span v-for="comp in formatCompetencies(person.competencies)" :key="comp" 
+                              class="text-[9px] px-1.5 py-0.5 rounded border border-gray-200 bg-gray-50 text-gray-500 truncate max-w-[150px]">
+                            {{ comp }}
+                        </span>
+                    </div>
+
+                    <div v-if="getMissingRestMonths(person.id).length > 0 && person.role !== 'Conseil'" 
+                         class="mt-2 text-[10px] text-red-600 font-bold bg-red-50 px-2 py-1 rounded flex items-start border border-red-100">
+                        <i class="fas fa-exclamation-circle mr-1 mt-0.5"></i> 
+                        <span>Pas de repos : {{ getMissingRestMonths(person.id).join(', ') }}</span>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="border-t bg-gray-100 text-sm border-t-4 transition-colors duration-300" 
-             :class="editingId ? 'border-t-orange-400 bg-orange-50' : 'border-t-transparent'">
-            <button @click="toggleForm" class="w-full flex justify-between items-center p-3 font-bold text-gray-600 hover:bg-gray-200 focus:outline-none">
-                <span>{{ editingId ? 'Modifier la personne' : 'Ajouter une personne' }}</span>
-                <i class="fas" :class="isFormOpen ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
-            </button>
-            <div v-show="isFormOpen" class="px-3 pb-3 space-y-2">
-                <input v-model="formPerson.name" placeholder="Nom Prénom" class="w-full p-2 border rounded shadow-sm focus:border-indigo-500 focus:outline-none">
-                <div class="flex gap-2">
-                    <select v-model="formPerson.role" class="w-1/2 p-2 border rounded shadow-sm bg-white">
-                        <option value="Membre">Membre</option>
-                        <option value="Conseil">Conseil</option>
-                    </select>
-                    <input v-model="formPerson.family" placeholder="Famille..." class="w-1/2 p-2 border rounded shadow-sm focus:border-indigo-500 focus:outline-none">
-                </div>
-                <div class="flex gap-2">
-                    <button v-if="editingId" @click="cancelEdit" class="w-1/3 bg-gray-300 text-gray-700 py-2 rounded shadow hover:bg-gray-400 transition">Annuler</button>
-                    <button @click="savePerson" class="flex-1 text-white py-2 rounded shadow transition font-medium" :class="editingId ? 'bg-orange-500 hover:bg-orange-600' : 'bg-indigo-600 hover:bg-indigo-700'">{{ editingId ? 'Enregistrer' : 'Ajouter' }}</button>
+            <div class="border-t bg-gray-100 text-sm border-t-4 transition-colors duration-300" 
+                 :class="editingId ? 'border-t-orange-400 bg-orange-50' : 'border-t-transparent'">
+                <button @click="toggleForm" class="w-full flex justify-between items-center p-3 font-bold text-gray-600 hover:bg-gray-200 focus:outline-none">
+                    <span>{{ editingId ? 'Modifier la personne' : 'Ajouter une personne' }}</span>
+                    <i class="fas" :class="isFormOpen ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
+                </button>
+                <div v-show="isFormOpen" class="px-3 pb-3 space-y-2">
+                    <input v-model="formPerson.name" placeholder="Nom Prénom" class="w-full p-2 border rounded shadow-sm focus:border-indigo-500 focus:outline-none">
+                    <div class="flex gap-2">
+                        <select v-model="formPerson.role" class="w-1/2 p-2 border rounded shadow-sm bg-white">
+                            <option value="Membre">Membre</option>
+                            <option value="Conseil">Conseil</option>
+                        </select>
+                        <input v-model="formPerson.family" placeholder="Famille..." class="w-1/2 p-2 border rounded shadow-sm focus:border-indigo-500 focus:outline-none">
+                    </div>
+                    
+                    <div class="bg-white p-2 border rounded max-h-48 overflow-y-auto custom-scrollbar">
+                        <p class="text-xs font-bold text-gray-500 mb-2 sticky top-0 bg-white pb-1 border-b">Compétences :</p>
+                        
+                        <div v-for="svc in services.filter(s => s.id !== 'repos')" :key="svc.id" class="mb-3">
+                            <div v-if="!svc.roles || svc.roles.length === 0" class="flex items-center">
+                                <input type="checkbox" :id="'comp-'+svc.id" :value="svc.id" v-model="formPerson.competencies" class="mr-2 rounded text-indigo-600">
+                                <label :for="'comp-'+svc.id" class="text-xs font-bold text-gray-700 cursor-pointer">{{ svc.name }}</label>
+                            </div>
+                            <div v-else>
+                                <div class="text-xs font-bold text-gray-700 mb-1 flex items-center">
+                                    <i class="fas fa-folder-open mr-1 text-gray-400"></i> {{ svc.name }}
+                                </div>
+                                <div class="pl-4 space-y-1 border-l-2 border-gray-100 ml-1">
+                                    <div v-for="role in svc.roles" :key="role" class="flex items-center">
+                                        <input type="checkbox" :id="'comp-'+svc.id+'-'+role" :value="svc.id + ':' + role" v-model="formPerson.competencies" class="mr-2 rounded text-indigo-600">
+                                        <label :for="'comp-'+svc.id+'-'+role" class="text-xs text-gray-600 cursor-pointer">{{ role }}</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button v-if="editingId" @click="cancelEdit" class="w-1/3 bg-gray-300 text-gray-700 py-2 rounded shadow hover:bg-gray-400 transition">Annuler</button>
+                        <button @click="savePerson" class="flex-1 text-white py-2 rounded shadow transition font-medium" :class="editingId ? 'bg-orange-500 hover:bg-orange-600' : 'bg-indigo-600 hover:bg-indigo-700'">{{ editingId ? 'Enregistrer' : 'Ajouter' }}</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <div class="flex flex-col justify-center z-30" data-html2canvas-ignore>
+        <button @click="isSidebarOpen = !isSidebarOpen" 
+                class="h-16 w-4 bg-white border-y border-r border-gray-300 rounded-r-md flex items-center justify-center hover:bg-gray-100 text-gray-500 shadow-md focus:outline-none -ml-[1px]">
+            <i class="fas text-xs" :class="isSidebarOpen ? 'fa-chevron-left' : 'fa-chevron-right'"></i>
+        </button>
+    </div>
+
     <div class="flex-1 flex flex-col min-w-0 bg-gray-100 relative">
         
-        <div class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm z-30" data-html2canvas-ignore>
+        <div class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm z-30 shrink-0" data-html2canvas-ignore>
             <div class="flex items-center gap-4">
-                <h1 class="text-xl font-bold text-gray-800">Planning</h1>
+                <h1 class="text-xl font-bold text-gray-800 hidden md:block">Planning</h1>
+                <div v-if="savedTimestamp" class="text-xs text-green-600 flex items-center bg-green-50 px-2 py-1 rounded">
+                    <i class="fas fa-check-circle mr-1"></i> Sauvegardé
+                </div>
             </div>
-            <div class="flex gap-3">
-                <button @click="resetAll" class="text-gray-500 hover:text-red-600 px-3 py-1 text-sm transition border border-transparent hover:border-red-200 rounded">
-                    <i class="fas fa-bomb mr-1"></i> Reset Total
+            <div class="flex gap-2">
+                <button @click="openServiceModal" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-2 rounded shadow-sm transition flex items-center text-sm">
+                    <i class="fas fa-sliders-h mr-2 text-indigo-600"></i> Config Services
                 </button>
-                <button @click="exportPDF" :disabled="isExporting" class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded shadow transition flex items-center text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i class="fas mr-2" :class="isExporting ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i> 
-                    {{ isExporting ? 'Export en cours...' : 'Exporter PDF' }}
+                <button @click="openPdfModal" class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded shadow transition flex items-center text-sm">
+                    <i class="fas fa-file-pdf mr-2"></i> Exporter PDF
                 </button>
                 <button @click="addEvent" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow transition flex items-center text-sm">
-                    <i class="fas fa-plus mr-2"></i> Événement
+                    <i class="fas fa-plus mr-2"></i> Date
+                </button>
+                <button @click="resetAll" class="ml-2 text-gray-400 hover:text-red-600 px-2 transition" title="Reset Total">
+                    <i class="fas fa-trash-alt"></i>
                 </button>
             </div>
         </div>
 
         <div class="flex-1 overflow-auto p-6 custom-scrollbar" id="planning-container">
-            
-            <div id="planning-board" class="bg-white rounded-xl shadow-lg border-2 border-gray-300">
+            <div id="planning-board" class="bg-white rounded-xl shadow-lg border-2 border-gray-300 relative min-w-max">
                 
-                <!-- En-tête du tableau -->
-                <div class="grid gap-0 border-b-2 border-gray-300" :style="`grid-template-columns: 150px repeat(${events.length}, minmax(250px, 1fr))`">
-                    <div class="bg-gray-800 text-white font-bold p-4 flex items-center justify-center border-r-2 border-gray-300">
+                <div class="grid gap-0 border-b-2 border-gray-300 sticky top-0 z-20 shadow-sm" :style="`grid-template-columns: 150px repeat(${events.length}, minmax(220px, 1fr))`">
+                    <div class="bg-gray-800 text-white font-bold p-4 flex items-center justify-center border-r-2 border-gray-300 sticky left-0 z-30">
                         <span>Service</span>
                     </div>
-                    <div v-for="event in events" :key="event.id" class="bg-gray-800 text-white p-4 border-r-2 border-gray-300 last:border-r-0 group relative">
-                        <div class="flex items-center justify-between">
-                            <span class="font-bold text-sm cursor-pointer" @click="renameEvent(event)">{{ event.name }}</span>
-                            <button @click="removeEvent(event.id)" class="text-gray-400 hover:text-red-400 transition ml-2" data-html2canvas-ignore>
+                    <div v-for="event in events" :key="event.id" class="bg-gray-800 text-white p-4 border-r-2 border-gray-300 last:border-r-0 text-center">
+                        <div class="flex items-center justify-between gap-2 justify-center">
+                            <span class="font-bold text-sm cursor-pointer hover:text-indigo-300 truncate" @click="renameEvent(event)">{{ event.name }}</span>
+                            <button @click="removeEvent(event.id)" class="text-gray-500 hover:text-red-400 transition absolute right-2" data-html2canvas-ignore>
                                 <i class="fas fa-times text-xs"></i>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Lignes du tableau -->
-                <div v-for="(service, serviceIndex) in services" :key="service.id" 
-                     class="grid gap-0 border-b border-gray-200 last:border-b-0"
-                     :style="`grid-template-columns: 150px repeat(${events.length}, minmax(250px, 1fr))`"
+                <div v-for="service in displayedServices" :key="service.id" 
+                     class="grid gap-0 border-b border-gray-200 last:border-b-0 group/row"
+                     :style="`grid-template-columns: 150px repeat(${events.length}, minmax(220px, 1fr))`"
                      :class="service.id === 'repos' ? 'bg-green-50/30' : ''">
                     
-                    <!-- Nom du service -->
-                    <div class="p-4 font-semibold border-r-2 border-gray-300 flex items-center justify-end text-right"
+                    <div class="p-4 font-semibold border-r-2 border-gray-300 flex flex-col justify-center items-end text-right sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
                          :class="service.id === 'repos' ? 'bg-green-100 text-green-700' : 'bg-gray-50 text-gray-700'">
-                        {{ service.name }}
+                        <span>{{ service.name }}</span>
+                        <div v-if="service.roles && service.roles.length > 0" class="mt-1 flex flex-wrap gap-1 justify-end">
+                             <span class="text-[9px] text-gray-400 bg-white border px-1 rounded">{{ service.roles.length }} postes</span>
+                        </div>
                     </div>
 
-                    <!-- Cellules pour chaque événement -->
                     <div v-for="event in events" :key="event.id" 
-                         class="p-3 min-h-[120px] border-r border-gray-200 last:border-r-0"
+                         class="p-2 border-r border-gray-200 last:border-r-0"
                          :class="service.id === 'repos' ? 'bg-green-50/50' : 'bg-white'">
-                        <div 
+                        
+                        <div v-if="service.roles && service.roles.length > 0 && service.id !== 'repos'" class="flex flex-col gap-2 h-full">
+                            
+                            <div v-if="getAssignments(event.id, service.id, null).length > 0" class="mb-2 p-1 bg-red-50 border border-red-200 rounded">
+                                <p class="text-[9px] text-red-500 font-bold mb-1">⚠️ Erreur :</p>
+                                <div v-for="assign in getAssignments(event.id, service.id, null)" :key="assign.internalId"
+                                     draggable="true" @dragstart="startDrag($event, assign.person, assign.internalId, null)"
+                                     class="bg-white border text-xs p-1 rounded mb-1 cursor-grab shadow-sm">{{ assign.person.name }}</div>
+                            </div>
+
+                            <div v-for="role in service.roles" :key="role" 
+                                 class="flex-1 min-h-[50px] border border-dashed rounded bg-gray-50 p-1 flex flex-col transition-colors"
+                                 :class="dragOverId === event.id + service.id + role ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200'"
+                                 @dragover.prevent @drop="onDrop($event, event.id, service.id, role)"
+                                 @dragenter="dragOverId = event.id + service.id + role" @dragleave="dragOverId = null">
+                                
+                                <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 block select-none">{{ role }}</span>
+                                
+                                <div v-for="assign in getAssignments(event.id, service.id, role)" :key="assign.internalId"
+                                     draggable="true" @dragstart="startDrag($event, assign.person, assign.internalId, role)"
+                                     class="bg-white border border-l-4 border-l-indigo-400 rounded shadow-sm p-1.5 text-sm mb-1 relative group cursor-grab hover:shadow-md"
+                                     :class="getValidationClass(assign, event.id, service.id)">
+                                    <div class="flex justify-between items-start">
+                                        <span class="font-bold text-gray-800 text-xs truncate">{{ assign.person.name }}</span>
+                                        <button @click.stop="removeAssignment(assign.internalId)" class="text-gray-300 hover:text-red-500 px-1" data-html2canvas-ignore><i class="fas fa-times text-[10px]"></i></button>
+                                    </div>
+                                    <span v-if="getFamilyWarning(assign, event.id, service.id)" class="text-[8px] text-red-700 bg-red-100 px-1 rounded block mt-1"><i class="fas fa-heart-broken"></i> Famille Repos</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-else
                             @dragover.prevent
-                            @drop="onDrop($event, event.id, service.id)"
-                            class="h-full border-2 border-dashed rounded-lg transition-all p-2 flex flex-col gap-2"
+                            @drop="onDrop($event, event.id, service.id, null)"
+                            class="h-full min-h-[100px] border-2 border-dashed rounded-lg transition-all p-1.5 flex flex-col gap-1.5"
                             :class="[
                                 service.id === 'repos' ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-gray-50',
                                 dragOverId === event.id + service.id ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200' : ''
@@ -188,247 +311,297 @@
                             @dragenter="dragOverId = event.id + service.id"
                             @dragleave="dragOverId = null"
                         >
-                            <div v-if="getAssignments(event.id, service.id).length === 0" class="flex-1 flex items-center justify-center opacity-30">
+                            <div v-if="getAssignments(event.id, service.id).length === 0" class="flex-1 flex items-center justify-center opacity-20 pointer-events-none">
                                 <i class="fas fa-plus text-gray-400 text-xs"></i>
                             </div>
 
-                            <div 
-                                v-for="assign in getAssignments(event.id, service.id)" 
-                                :key="assign.internalId"
-                                draggable="true"
-                                @dragstart="startDrag($event, assign.person, assign.internalId)"
-                                class="bg-white border rounded shadow-sm p-2 text-sm relative group cursor-grab active:cursor-grabbing hover:shadow-md transition-all"
+                            <div v-for="assign in getAssignments(event.id, service.id)" :key="assign.internalId"
+                                draggable="true" @dragstart="startDrag($event, assign.person, assign.internalId, null)"
+                                class="bg-white border rounded shadow-sm p-1.5 text-sm relative group cursor-grab hover:shadow-md transition-all"
                                 :class="getValidationClass(assign, event.id, service.id)"
                             >
                                 <div class="flex justify-between items-start">
-                                    <span class="font-bold text-gray-800 text-xs">{{ assign.person.name }}</span>
-                                    <button @click.stop="removeAssignment(assign.internalId)" class="text-gray-300 hover:text-red-500 transition" data-html2canvas-ignore>
-                                        <i class="fas fa-times text-xs"></i>
+                                    <span class="font-bold text-gray-800 text-xs truncate">{{ assign.person.name }}</span>
+                                    <button @click.stop="removeAssignment(assign.internalId)" class="text-gray-300 hover:text-red-500 transition px-1" data-html2canvas-ignore>
+                                        <i class="fas fa-times text-[10px]"></i>
                                     </button>
                                 </div>
-                                <div v-if="assign.person.role === 'Conseil'" class="mt-1">
-                                    <span class="text-[9px] bg-purple-100 text-purple-700 px-1 rounded">Conseil</span>
+                                <div class="flex flex-wrap gap-1 mt-0.5">
+                                    <span v-if="assign.person.role === 'Conseil'" class="text-[8px] bg-purple-100 text-purple-700 px-1 rounded">Conseil</span>
+                                    <span v-if="getFamilyWarning(assign, event.id, service.id)" class="text-[8px] text-red-700 bg-red-100 px-1 rounded font-bold"><i class="fas fa-heart-broken"></i> Famille Repos</span>
                                 </div>
-                                <div v-if="getFamilyWarning(assign, event.id, service.id)" class="mt-1 text-[9px] leading-tight text-red-700 bg-red-100 px-1.5 py-1 rounded flex items-start gap-1 border border-red-200">
-                                    <i class="fas fa-heart-broken mt-0.5"></i>
-                                    <span class="font-medium">Famille repos!</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="pdf-export-zone" style="position: fixed; left: -9999px; top: 0; width: 1500px; background: white; padding: 30px; z-index: -50;">
+        <div class="pdf-title">Planning Église</div>
+        <table class="pdf-table">
+            <thead>
+                <tr>
+                    <th style="width: 150px;">Service</th>
+                    <th v-for="event in events" :key="'pdf-h-'+event.id">{{ event.name }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="service in displayedServices" :key="'pdf-r-'+service.id">
+                    <td class="pdf-service-cell">{{ service.name }}</td>
+                    <td v-for="event in events" :key="'pdf-c-'+event.id+service.id">
+                        
+                        <div v-if="service.roles && service.roles.length > 0 && service.id !== 'repos'">
+                            <div v-for="role in service.roles" :key="role">
+                                <div class="pdf-role-label">{{ role }}</div>
+                                <div v-for="assign in getAssignments(event.id, service.id, role)" :key="assign.internalId" class="pdf-person-name">
+                                    <span class="pdf-bullet">●</span> {{ assign.person.name }}
                                 </div>
+                            </div>
+                            <div v-if="getAssignments(event.id, service.id, null).length > 0" class="mt-2 text-red-600">
+                                <div class="pdf-role-label text-red-600">Non assigné</div>
+                                <div v-for="assign in getAssignments(event.id, service.id, null)" :key="assign.internalId" class="pdf-person-name text-red-600">
+                                    <span class="pdf-bullet text-red-400">●</span> {{ assign.person.name }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-else>
+                            <div v-for="assign in getAssignments(event.id, service.id)" :key="assign.internalId" class="pdf-person-name">
+                                <span class="pdf-bullet">●</span> {{ assign.person.name }}
+                            </div>
+                        </div>
+
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div v-if="showPdfModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" data-html2canvas-ignore>
+        <div class="bg-white rounded-lg shadow-xl w-96 max-w-full p-6">
+            <h3 class="text-lg font-bold mb-4 flex items-center"><i class="fas fa-file-pdf text-red-500 mr-2"></i> Export PDF</h3>
+            <div class="space-y-4">
+                <p class="text-sm text-gray-500 mb-2">Sélectionnez les services à imprimer.</p>
+                <div class="max-h-40 overflow-y-auto border rounded p-2 bg-gray-50 space-y-1 custom-scrollbar">
+                    <div v-for="svc in services" :key="svc.id" class="flex items-center">
+                        <input type="checkbox" :id="'pdf-'+svc.id" :value="svc.id" v-model="pdfOptions.selectedServices" class="mr-2 rounded text-indigo-600">
+                        <label :for="'pdf-'+svc.id" class="text-sm select-none cursor-pointer flex-1">{{ svc.name }}</label>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end gap-3 mt-6">
+                    <button @click="showPdfModal = false" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Annuler</button>
+                    <button @click="confirmExportPDF" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded shadow flex items-center" :disabled="isExporting">
+                        <i class="fas mr-2" :class="isExporting ? 'fa-spinner fa-spin' : 'fa-print'"></i> {{ isExporting ? 'Génération...' : 'Télécharger' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="showServiceModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" data-html2canvas-ignore>
+        <div class="bg-white rounded-lg shadow-xl w-[600px] max-w-full flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b">
+                <h3 class="text-lg font-bold"><i class="fas fa-sliders-h text-gray-600 mr-2"></i> Configurer Services</h3>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                <div class="flex gap-2 mb-6">
+                    <input v-model="newServiceName" @keyup.enter="addNewService" placeholder="Nouveau service..." class="flex-1 border p-2 rounded focus:outline-none focus:border-indigo-500">
+                    <button @click="addNewService" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"><i class="fas fa-plus"></i></button>
+                </div>
+                <div class="space-y-4">
+                    <div v-for="svc in services" :key="svc.id" class="border rounded-lg bg-gray-50 overflow-hidden">
+                        <div class="p-3 bg-white border-b flex items-center justify-between">
+                            <span :class="svc.id === 'repos' ? 'font-bold text-green-700' : 'font-semibold'">{{ svc.name }}</span>
+                            <div v-if="svc.id !== 'repos'" class="flex gap-2">
+                                <button @click="deleteService(svc.id)" class="text-red-400 hover:text-red-600 text-sm px-2"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div v-if="svc.id !== 'repos'" class="p-3">
+                            <p class="text-xs text-gray-500 uppercase font-bold mb-2">Postes (Sous-catégories)</p>
+                            <div class="flex flex-wrap gap-2 mb-2">
+                                <div v-for="(role, idx) in svc.roles" :key="idx" class="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded flex items-center">
+                                    {{ role }}
+                                    <button @click="removeRole(svc, idx)" class="ml-2 text-indigo-400 hover:text-indigo-900"><i class="fas fa-times"></i></button>
+                                </div>
+                                <span v-if="!svc.roles || svc.roles.length === 0" class="text-xs text-gray-400 italic">Aucun poste défini</span>
+                            </div>
+                            <div class="flex gap-2 mt-2">
+                                <input v-model="tempRoleInputs[svc.id]" @keyup.enter="addRole(svc)" placeholder="Ajouter un poste..." class="flex-1 text-xs border p-1.5 rounded focus:outline-none focus:border-indigo-500">
+                                <button @click="addRole(svc)" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded text-xs"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
+            <div class="p-4 border-t bg-gray-50 text-right rounded-b-lg">
+                <button @click="showServiceModal = false" class="px-5 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded font-medium">Fermer</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    const { createApp, ref, computed, reactive, nextTick } = Vue;
+    const { createApp, ref, computed, reactive, nextTick, watch } = Vue;
 
     createApp({
         setup() {
-            const persons = ref([
-                { id: 'p1', name: 'Loïc Dupont', role: 'Membre', familyId: 'Dupont' },
-                { id: 'p2', name: 'Marie Dupont', role: 'Membre', familyId: 'Dupont' },
-                { id: 'p3', name: 'Jean Martin', role: 'Conseil', familyId: 'Martin' },
-                { id: 'p4', name: 'Sophie Martin', role: 'Membre', familyId: 'Martin' },
-            ]);
+            // --- STATE INITIAL ---
+            const defaultServices = [
+                { id: 'accueil', name: 'Accueil', roles: [] },
+                { id: 'louange', name: 'Louange', roles: ['Leader', 'Chant', 'Musique', 'Sono'] },
+                { id: 'predic', name: 'Prédication', roles: [] },
+                { id: 'enfants', name: 'Enfants', roles: [] },
+                { id: 'repos', name: 'EN REPOS', roles: [] }, 
+            ];
 
-            const services = ref([
-                { id: 'accueil', name: 'Accueil' },
-                { id: 'louange', name: 'Louange' },
-                { id: 'predic', name: 'Prédication' },
-                { id: 'enfants', name: 'Enfants' },
-                { id: 'repos', name: 'EN REPOS' }, 
-            ]);
+            const loadedServices = JSON.parse(localStorage.getItem('pl_services')) || defaultServices;
+            loadedServices.forEach(s => { if(!s.roles) s.roles = []; });
 
-            const events = ref([
+            const services = ref(loadedServices);
+            const persons = ref(JSON.parse(localStorage.getItem('pl_persons')) || [
+                { id: 'p1', name: 'Loïc Dupont', role: 'Membre', familyId: 'Dupont', competencies: ['accueil', 'louange:Chant'] },
+            ]);
+            const events = ref(JSON.parse(localStorage.getItem('pl_events')) || [
                 { id: 'e1', name: 'Dim 05 Jan' },
                 { id: 'e2', name: 'Dim 12 Jan' },
-                { id: 'e3', name: 'Dim 19 Jan' },
             ]);
+            const assignments = ref(JSON.parse(localStorage.getItem('pl_assignments')) || []);
 
-            const assignments = ref([]);
+            // --- UI STATE ---
+            const isSidebarOpen = ref(true);
             const dragOverId = ref(null);
             const searchQuery = ref("");
             const editingId = ref(null);
             const isFormOpen = ref(false); 
-            const isPrinting = ref(false);
             const isExporting = ref(false);
+            const savedTimestamp = ref(null);
+            const showPdfModal = ref(false);
+            const showServiceModal = ref(false);
+            const newServiceName = ref("");
+            const tempRoleInputs = reactive({}); 
+            const pdfOptions = reactive({ selectedServices: [] });
+            const formPerson = reactive({ name: "", role: "Membre", family: "", competencies: [] });
 
-            const formPerson = reactive({ name: "", role: "Membre", family: "" });
+            // --- PERSISTANCE ---
+            const saveData = () => {
+                localStorage.setItem('pl_persons', JSON.stringify(persons.value));
+                localStorage.setItem('pl_services', JSON.stringify(services.value));
+                localStorage.setItem('pl_events', JSON.stringify(events.value));
+                localStorage.setItem('pl_assignments', JSON.stringify(assignments.value));
+                savedTimestamp.value = new Date();
+                setTimeout(() => savedTimestamp.value = null, 2000);
+            };
+            watch([persons, services, events, assignments], saveData, { deep: true });
 
+            // --- COMPUTED ---
             const filteredPersons = computed(() => {
                 if (!searchQuery.value) return persons.value;
                 return persons.value.filter(p => p.name.toLowerCase().includes(searchQuery.value.toLowerCase()));
             });
 
-            const getAssignments = (eventId, serviceId) => 
-                assignments.value.filter(a => a.eventId === eventId && a.serviceId === serviceId);
+            const displayedServices = computed(() => {
+                if (isExporting.value) return services.value.filter(s => pdfOptions.selectedServices.includes(s.id));
+                return services.value;
+            });
 
-            const getRestCount = (personId) => 
-                assignments.value.filter(a => a.person.id === personId && a.serviceId === 'repos').length;
+            // --- HELPERS ---
+            const formatCompetencies = (comps) => {
+                if (!comps) return [];
+                return comps.map(c => {
+                    const [svcId, role] = c.split(':');
+                    const svc = services.value.find(s => s.id === svcId);
+                    if (!svc) return c;
+                    return role ? `${svc.name} > ${role}` : svc.name;
+                });
+            };
+
+            const getAssignments = (eventId, serviceId, role = null) => {
+                return assignments.value.filter(a => {
+                    const match = a.eventId === eventId && a.serviceId === serviceId;
+                    if (!match) return false;
+                    if (role !== null) return a.role === role;
+                    return !a.role; 
+                });
+            };
+
+            const getServiceName = (id) => { const s = services.value.find(x => x.id === id); return s ? s.name : id; };
 
             const getFamilyWarning = (assignment, eventId, serviceId) => {
                 if (assignment.person.role === 'Conseil') return false; 
                 if (serviceId === 'repos' || !assignment.person.familyId) return false;
-                
-                const peopleInRest = getAssignments(eventId, 'repos');
-                return peopleInRest.find(a => 
-                    a.person.familyId === assignment.person.familyId && 
-                    a.person.id !== assignment.person.id
+                return getAssignments(eventId, 'repos').find(a => 
+                    a.person.familyId === assignment.person.familyId && a.person.id !== assignment.person.id
                 );
             };
 
             const getValidationClass = (assignment, eventId, serviceId) => {
-                if (getFamilyWarning(assignment, eventId, serviceId)) return 'border-red-400 ring-1 ring-red-400 bg-red-50';
-                if (serviceId === 'repos') return 'border-green-300 bg-green-50/80';
-                return 'border-gray-200';
+                if (getFamilyWarning(assignment, eventId, serviceId)) return 'border-red-400 ring-1 ring-red-400 bg-red-50 text-red-900';
+                if (serviceId === 'repos') return 'border-green-300 bg-green-50/80 text-green-900';
+                return 'border-gray-200 text-gray-800';
             };
 
-            const exportPDF = async () => {
-                isExporting.value = true;
-                
-                // Ajouter la classe au body
-                document.body.classList.add('printing-active');
-                
-                await nextTick();
-                await new Promise(resolve => setTimeout(resolve, 300));
-                
-                const element = document.getElementById('planning-board');
-                
-                try {
-                    // Capturer avec html2canvas
-                    const canvas = await html2canvas(element, {
-                        scale: 2,
-                        useCORS: true,
-                        logging: false,
-                        backgroundColor: '#ffffff',
-                        windowWidth: element.scrollWidth + 100,
-                        windowHeight: element.scrollHeight + 100,
-                        x: 0,
-                        y: 0
-                    });
-                    
-                    // Créer le PDF avec jsPDF
-                    const { jsPDF } = window.jspdf;
-                    
-                    const imgWidth = canvas.width;
-                    const imgHeight = canvas.height;
-                    
-                    // Calculer les dimensions du PDF (A3 paysage en mm)
-                    const pdfWidth = 420; // A3 largeur en mm
-                    const pdfHeight = 297; // A3 hauteur en mm
-                    
-                    // Calculer le ratio pour adapter l'image
-                    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-                    const scaledWidth = imgWidth * ratio;
-                    const scaledHeight = imgHeight * ratio;
-                    
-                    // Créer le PDF
-                    const pdf = new jsPDF({
-                        orientation: 'landscape',
-                        unit: 'mm',
-                        format: 'a3'
-                    });
-                    
-                    // Centrer l'image
-                    const xOffset = (pdfWidth - scaledWidth) / 2;
-                    const yOffset = (pdfHeight - scaledHeight) / 2;
-                    
-                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                    pdf.addImage(imgData, 'JPEG', xOffset, yOffset, scaledWidth, scaledHeight);
-                    
-                    // Sauvegarder
-                    pdf.save(`planning-eglise-${new Date().toISOString().split('T')[0]}.pdf`);
-                    
-                } catch (error) {
-                    console.error('Erreur lors de l\'export PDF:', error);
-                    alert('Une erreur est survenue lors de l\'export PDF. Veuillez réessayer.');
-                } finally {
-                    document.body.classList.remove('printing-active');
-                    isPrinting.value = false;
-                    isExporting.value = false;
+            const activeMonths = computed(() => {
+                const months = new Set();
+                events.value.forEach(e => {
+                    const parts = e.name.trim().split(' ');
+                    const m = parts.find(p => p.length >= 3 && !p.toLowerCase().includes('dim'));
+                    if(m) months.add(m);
+                });
+                return Array.from(months);
+            });
+
+            const getMissingRestMonths = (personId) => {
+                const missing = [];
+                activeMonths.value.forEach(month => {
+                    const eventsInMonth = events.value.filter(e => e.name.includes(month));
+                    if(eventsInMonth.length === 0) return;
+                    const hasRest = assignments.value.some(a => 
+                        a.person.id === personId && a.serviceId === 'repos' && eventsInMonth.some(e => e.id === a.eventId)
+                    );
+                    if(!hasRest) missing.push(month);
+                });
+                return missing;
+            };
+
+            // --- DRAG & DROP VALIDATION ---
+            const checkCompetency = (person, serviceId, targetRole) => {
+                if (serviceId === 'repos') return true;
+                if (!person.competencies) return false;
+                if (!targetRole) {
+                    return person.competencies.some(c => c === serviceId || c.startsWith(serviceId + ':'));
                 }
+                const requiredComp = serviceId + ':' + targetRole;
+                return person.competencies.includes(requiredComp);
             };
 
-            const startEdit = (person) => {
-                editingId.value = person.id;
-                formPerson.name = person.name;
-                formPerson.role = person.role;
-                formPerson.family = person.familyId || "";
-                isFormOpen.value = true; 
-            };
-
-            const cancelEdit = () => {
-                editingId.value = null;
-                formPerson.name = ""; formPerson.role = "Membre"; formPerson.family = "";
-                isFormOpen.value = false; 
-            };
-
-            const toggleForm = () => {
-                isFormOpen.value = !isFormOpen.value;
-                if(!isFormOpen.value) {
-                    editingId.value = null;
-                    formPerson.name = ""; formPerson.role = "Membre"; formPerson.family = "";
-                }
-            };
-
-            const savePerson = () => {
-                if(!formPerson.name.trim()) return;
-
-                if (editingId.value) {
-                    const index = persons.value.findIndex(p => p.id === editingId.value);
-                    if (index !== -1) {
-                        persons.value[index].name = formPerson.name;
-                        persons.value[index].role = formPerson.role;
-                        persons.value[index].familyId = formPerson.family || null;
-                        
-                        assignments.value.forEach(assign => {
-                            if (assign.person.id === editingId.value) {
-                                assign.person.name = formPerson.name;
-                                assign.person.role = formPerson.role;
-                                assign.person.familyId = formPerson.family || null;
-                            }
-                        });
-                    }
-                } else {
-                    persons.value.push({
-                        id: 'p' + Date.now(),
-                        name: formPerson.name,
-                        role: formPerson.role,
-                        familyId: formPerson.family || null
-                    });
-                }
-                
-                if (editingId.value) { cancelEdit(); } 
-                else { formPerson.name = ""; formPerson.role = "Membre"; formPerson.family = ""; }
-            };
-
-            const startDrag = (evt, person, assignmentId) => {
+            const startDrag = (evt, person, assignmentId, currentRole) => {
                 evt.dataTransfer.dropEffect = 'move';
                 evt.dataTransfer.effectAllowed = 'all';
-                const payload = { person: person, sourceId: assignmentId };
+                const payload = { person: person, sourceId: assignmentId, sourceRole: currentRole };
                 evt.dataTransfer.setData('payload', JSON.stringify(payload));
             };
 
-            const onDrop = (evt, eventId, serviceId) => {
+            const onDrop = (evt, eventId, serviceId, targetRole) => {
                 dragOverId.value = null;
                 const raw = evt.dataTransfer.getData('payload');
                 if (!raw) return;
                 
                 const { person, sourceId } = JSON.parse(raw);
 
+                if (!checkCompetency(person, serviceId, targetRole)) {
+                    const roleName = targetRole ? targetRole : getServiceName(serviceId);
+                    alert(`🚫 ${person.name} n'a pas la compétence "${roleName}".`);
+                    return;
+                }
+
                 if (person.role !== 'Conseil') {
                     const existing = assignments.value.find(a => 
-                        a.eventId === eventId && 
-                        a.person.id === person.id && 
-                        a.internalId !== sourceId
+                        a.eventId === eventId && a.person.id === person.id && a.internalId !== sourceId
                     );
-                    if (existing) {
-                        alert(`🚫 ${person.name} est déjà sur cet événement.`);
-                        return;
-                    }
+                    if (existing) { alert(`🚫 ${person.name} est déjà sur cet événement.`); return; }
                 }
 
                 if (sourceId) removeAssignment(sourceId);
@@ -437,39 +610,118 @@
                     internalId: Date.now() + Math.random(),
                     person: person,
                     eventId: eventId,
-                    serviceId: serviceId
+                    serviceId: serviceId,
+                    role: targetRole 
                 });
             };
 
-            const removeAssignment = (id) => assignments.value = assignments.value.filter(a => a.internalId !== id);
-            
-            const renameEvent = (event) => {
-                const newName = prompt("Renommer l'événement :", event.name);
-                if (newName && newName.trim()) event.name = newName;
+            // --- MANAGEMENT ---
+            const openServiceModal = () => showServiceModal.value = true;
+            const addNewService = () => {
+                if(!newServiceName.value.trim()) return;
+                services.value.splice(services.value.length - 1, 0, { id: 'svc-' + Date.now(), name: newServiceName.value, roles: [] });
+                newServiceName.value = "";
             };
-
-            const removeEvent = (id) => {
-                if(confirm("Supprimer cette colonne ?")) {
-                    events.value = events.value.filter(e => e.id !== id);
-                    assignments.value = assignments.value.filter(a => a.eventId !== id);
+            const deleteService = (id) => {
+                if(confirm("Supprimer ?")) {
+                    services.value = services.value.filter(s => s.id !== id);
+                    assignments.value = assignments.value.filter(a => a.serviceId !== id);
+                    persons.value.forEach(p => { if(p.competencies) p.competencies = p.competencies.filter(c => !c.startsWith(id)); });
                 }
             };
-            const addEvent = () => events.value.push({ id: 'e' + Date.now(), name: 'Nouv. Event' });
-            
-            const resetAll = () => { 
-                if(confirm("ATTENTION : Cela va supprimer TOUS les événements et le planning en cours. Tout effacer ?")) {
-                    assignments.value = [];
-                    events.value = []; 
-                } 
+            const addRole = (svc) => {
+                const val = tempRoleInputs[svc.id];
+                if(val && val.trim()) {
+                    if(!svc.roles) svc.roles = [];
+                    svc.roles.push(val.trim());
+                    tempRoleInputs[svc.id] = "";
+                }
+            };
+            const removeRole = (svc, idx) => svc.roles.splice(idx, 1);
+
+            // --- PERSONNES ---
+            const startEdit = (p) => {
+                editingId.value = p.id;
+                formPerson.name = p.name; formPerson.role = p.role; formPerson.family = p.familyId || ""; 
+                formPerson.competencies = p.competencies ? [...p.competencies] : [];
+                isFormOpen.value = true; 
+            };
+            const cancelEdit = () => { editingId.value = null; isFormOpen.value = false; formPerson.name = ""; formPerson.role = "Membre"; formPerson.family = ""; formPerson.competencies = []; };
+            const toggleForm = () => { isFormOpen.value = !isFormOpen.value; if(!isFormOpen.value) cancelEdit(); };
+            const savePerson = () => {
+                if(!formPerson.name.trim()) return;
+                const data = { name: formPerson.name, role: formPerson.role, familyId: formPerson.family || null, competencies: [...formPerson.competencies] };
+                if (editingId.value) {
+                    const idx = persons.value.findIndex(p => p.id === editingId.value);
+                    if (idx !== -1) {
+                        Object.assign(persons.value[idx], data);
+                        assignments.value.forEach(a => { if (a.person.id === editingId.value) Object.assign(a.person, data); });
+                    }
+                } else { persons.value.push({ id: 'p' + Date.now(), ...data }); }
+                if (editingId.value) cancelEdit(); else { formPerson.name = ""; formPerson.role = "Membre"; formPerson.family = ""; formPerson.competencies = []; }
             };
 
+            // --- EXPORT PDF ---
+            const openPdfModal = () => { pdfOptions.selectedServices = services.value.map(s => s.id); showPdfModal.value = true; };
+            
+            const confirmExportPDF = async () => {
+                isExporting.value = true;
+                showPdfModal.value = false;
+
+                const element = document.getElementById('pdf-export-zone');
+                
+                await nextTick();
+                await new Promise(r => setTimeout(r, 500));
+
+                try {
+                    const canvas = await html2canvas(element, {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        logging: false
+                    });
+                    
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
+                    
+                    const imgW = canvas.width;
+                    const imgH = canvas.height;
+                    const pdfW = 420;
+                    const pdfH = 297;
+                    
+                    const ratio = Math.min((pdfW - 20) / imgW, (pdfH - 20) / imgH);
+                    const finalW = imgW * ratio;
+                    const finalH = imgH * ratio;
+                    
+                    const x = (pdfW - finalW) / 2;
+                    const y = 10;
+
+                    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', x, y, finalW, finalH);
+                    pdf.save(`planning-eglise-${new Date().toISOString().split('T')[0]}.pdf`);
+                    
+                } catch (e) {
+                    console.error(e);
+                    alert("Erreur lors de la création du PDF.");
+                } finally {
+                    isExporting.value = false;
+                }
+            };
+
+            const removeAssignment = (id) => assignments.value = assignments.value.filter(a => a.internalId !== id);
+            const renameEvent = (e) => { const n = prompt("Renommer :", e.name); if(n) e.name = n; };
+            const removeEvent = (id) => { if(confirm("Supprimer ?")) { events.value = events.value.filter(e => e.id !== id); assignments.value = assignments.value.filter(a => a.eventId !== id); }};
+            const addEvent = () => events.value.push({ id: 'e' + Date.now(), name: 'Dim JJ MMM' });
+            const resetAll = () => { if(confirm("💥 TOUT EFFACER ?")) { localStorage.clear(); location.reload(); }};
+
             return {
-                persons, services, events, assignments, searchQuery, filteredPersons,
-                dragOverId, formPerson, editingId, isFormOpen, isPrinting, isExporting,
-                getAssignments, startDrag, onDrop, removeAssignment,
-                getFamilyWarning, getValidationClass, getRestCount,
-                addEvent, removeEvent, renameEvent, resetAll,
-                savePerson, startEdit, cancelEdit, toggleForm, exportPDF
+                persons, services, events, assignments, searchQuery, filteredPersons, displayedServices,
+                dragOverId, formPerson, editingId, isFormOpen, isExporting, savedTimestamp, isSidebarOpen,
+                showPdfModal, showServiceModal, newServiceName, pdfOptions, activeMonths, tempRoleInputs,
+                getAssignments, getServiceName, getValidationClass, getFamilyWarning, getMissingRestMonths, formatCompetencies,
+                startDrag, onDrop, removeAssignment, addEvent, removeEvent, renameEvent, resetAll,
+                savePerson, startEdit, cancelEdit, toggleForm,
+                openServiceModal, addNewService, deleteService, addRole, removeRole,
+                openPdfModal, confirmExportPDF
             };
         }
     }).mount('#app');
